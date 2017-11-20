@@ -1,35 +1,39 @@
 from datetime import datetime, timedelta
 import re
 import requests
+from multiprocessing.dummy import Pool
 from bs4 import BeautifulSoup as bs
-from argparse import ArgumentParser
 
 
-def get_parser_of_command_line():
-    parser = ArgumentParser(description='Settings search movies')
-
-    parser.add_argument('-d', '--day', nargs='?',
-                        help='The number of days in cinemas',
-                        default=21, type=int)
-    parser.add_argument('-c', '--count', nargs='?',
-                        help='The number of cinemas which show the film',
-                        default=30, type=int)
-    parser.add_argument('-r', '--rating', nargs='?',
-                        help='Minimal movie rating',
-                        default=3.00, type=float)
-    return parser.parse_args()
+IMAGE_FILM_URL = 'http/kinopoisk.ru/images/film_big/{}.jgp'
 
 
 def get_date_for_search(delta_days):
     current_date = datetime.now().date()
     initial_date = (datetime.now() - timedelta(days=delta_days)).date()
-    return  current_date, initial_date
+    return current_date, initial_date
 
 
 def fetch_afisha_page():
     url_afisha = 'https://www.afisha.ru/msk/schedule_cinema/'
     raw_html = requests.get(url_afisha).content
     return raw_html
+
+
+def fetch_afisha_film_page(link_movie):
+    content_film_page = requests.get(link_movie).content
+    return content_film_page
+
+
+def parse_afisha_film_page(link_movie):
+    content = bs(fetch_afisha_film_page(link_movie), 'html.parser')
+    description_id = {'id':'ctl00_CenterPlaceHolder_ucMainPageContent_pEditorComments'}
+    ganres = content.find_all('div', {'class':'b-tags'}, 'a')
+    try:
+        movie_description = content.find('p', description_id).text.strip()
+    except AttributeError:
+        movie_discription = None
+    return movie_description, ganres[0].text.strip()
 
 
 def parse_afisha_list(afisha_html, good_count_cinemas):
@@ -40,9 +44,13 @@ def parse_afisha_list(afisha_html, good_count_cinemas):
     for movie in content_movies:
         title = movie('h3', {'class': 'usetags'})[0].get_text()
         count_cinemas = len(movie('td',{'class': 'b-td-item'},'a'))
+        link_movie = movie.h3.a['href']
         if int(count_cinemas) >= good_count_cinemas:
+            description, ganres = parse_afisha_film_page(link_movie)
             title_and_count_cinemas = {'title': title,
-                                       'count_cinemas': count_cinemas}
+                                       'count_cinemas': count_cinemas,
+                                       'ganres': ganres,
+                                       'description': description}
             info_movies_afisha.append(title_and_count_cinemas)
     return info_movies_afisha
 
@@ -83,6 +91,8 @@ def get_films_in_kinopoisk(kinopoisk_content,
     for movie in content_movies:
         title = movie.find('span', {'class': 'name'}).text
         start_date = movie.find('meta').get('content')
+        id_movie = movie['id']
+        poster_movie = IMAGE_FILM_URL.format(id_movie)
         try:
             rating = movie.find('u').text.split()[0]
         except AttributeError:
@@ -91,8 +101,9 @@ def get_films_in_kinopoisk(kinopoisk_content,
             continue
         start_date = datetime.strptime(start_date,"%Y-%m-%d").date()
         if current_date >= start_date >= initial_date and float(rating) >= good_rate:
-            title_and_rate = {'title': title, 'rate': rating}
-            info_movies_kinopoisk.append(title_and_rate)
+            title_rate_id = {'title': title, 'rate': rating,
+                             'poster': poster_movie}
+            info_movies_kinopoisk.append(title_rate_id)
     return info_movies_kinopoisk
 
 
@@ -103,33 +114,27 @@ def get_pop_movies(list_afisha, list_kinopoisk):
             if movie_afisha['title'] == movie_kinopoisk['title']:
                 movie_afisha.update(movie_kinopoisk)
                 common_info_list.append(movie_afisha)
+    print(common_info_list)
     return common_info_list
 
 
-def output_movies_to_console(common_info_list):
-    for film in common_info_list[:10]:
-        movie = 'Film: {title}'.format(**film)
-        rate = 'Kinopoisk rating: {rate}'.format(**film)
-        count_cinemas = 'Show in {count_cinemas} cinemas in Moscow'.format(**film)
-        print(movie)
-        print(rate)
-        print(count_cinemas + '\n')
-
-
-if __name__ == '__main__':
-    user_settings = get_parser_of_command_line()
-    delta_days = user_settings.day
-    good_rate = user_settings.rating
-    good_count_cinemas = user_settings.count
+def output_movies():
+    delta_days = 31
+    good_rate = 5.00
+    good_count_cinemas = 30
     current_date, initial_date = get_date_for_search(delta_days)
     current_month = datetime.today().month
     last_month = initial_date.month
-    kinopoisk_content = fetch_movie_info(last_month,current_month)
+    kinopoisk_content = fetch_movie_info(last_month, current_month)
     list_kinopoisk = get_films_in_kinopoisk(kinopoisk_content,
                                             initial_date,
                                             current_date,
                                             good_rate)
     afisha_content = fetch_afisha_page()
     list_afisha = parse_afisha_list(afisha_content, good_count_cinemas)
-    movies_list = get_pop_movies(list_afisha, list_kinopoisk)
-    output_movies_to_console(movies_list)
+    common_info_list = get_pop_movies(list_afisha, list_kinopoisk)
+    return common_info_list[:10]
+
+
+if __name__ == '__main__':
+    print(output_movies())
