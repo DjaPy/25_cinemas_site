@@ -26,18 +26,19 @@
       </div>
     </nav>
 
+
+
     <div class="container">
-      <div class="col-md-6 col-xs-12">
-        <div>
-          1 фильм
+      {{% for film in films %}}
+      <div class="row">
+        <div class="col-md-6 col-xs-12">
+          <div>
+            <img src="{{ film['poster'] }}" alt="{{ film['title'] }}" class="img-thumbnail">
+          </div>
         </div>
       </div>
-      <div class="col-md-6 col-xs-12">
-        <div>
-          2 фильм
-        </div>
-      </div>
-      <p>There Will Be Films</p>
+    </div>
+
     </div><!-- /.container -->
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>

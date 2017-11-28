@@ -7,7 +7,7 @@ import threading
 from bs4 import BeautifulSoup as bs
 
 
-IMAGE_FILM_URL = 'https://st.kp.yandex.net/images/{}/817969.jpg'
+IMAGE_FILM_URL = 'https://st.kp.yandex.net/images/film_big/{}.jpg'
 URL_AFISHA = 'https://www.afisha.ru/msk/schedule_cinema/'
 URLS_KINOPOISK = ['https://www.kinopoisk.ru/premiere/ru/2017/month/{}/',
                   'https://www.kinopoisk.ru/premiere/ru/2017/month/{}/page/1/ajax/true/']
