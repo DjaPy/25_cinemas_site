@@ -4,6 +4,7 @@ import requests
 import time
 from queue import Queue
 import threading
+from operator import itemgetter
 from bs4 import BeautifulSoup as bs
 
 
@@ -117,7 +118,6 @@ def get_threads_afisha(data_info_movies):
         except AttributeError:
             movie_discription = None
         movie.update(ganres=ganres[0].text.strip(), description=movie_description)
-        del movie['link']
         movie_full_info_with_afisha.append(movie)
     return movie_full_info_with_afisha
 
@@ -129,12 +129,15 @@ def get_pop_movies(list_afisha, list_kinopoisk):
             if movie_afisha['title'] == movie_kinopoisk['title']:
                 movie_afisha.update(movie_kinopoisk)
                 common_info_list.append(movie_afisha)
-    return common_info_list
+    sorted_common_info_list = sorted(common_info_list,
+                                     key=itemgetter('rate'),
+                                     reverse=True)
+    return sorted_common_info_list
 
 
 def output_movies():
     delta_days = 30
-    good_rate = 5.00
+    good_rate = 4.00
     good_count_cinemas = 30
     current_date, initial_date = get_date_for_search(delta_days)
     current_month = datetime.today().month
