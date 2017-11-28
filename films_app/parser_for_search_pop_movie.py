@@ -112,12 +112,12 @@ def get_threads_afisha(data_info_movies):
         content = bs(content, 'html.parser')
         description_id = {
             'id': 'ctl00_CenterPlaceHolder_ucMainPageContent_pEditorComments'}
-        ganres = content.find_all('div', {'class': 'b-tags'}, 'a')
+        genres = content.find_all('div', {'class': 'b-tags'}, 'a')
         try:
             movie_description = content.find('p', description_id).text.strip()
         except AttributeError:
             movie_discription = None
-        movie.update(ganres=ganres[0].text.strip(), description=movie_description)
+        movie.update(genres=genres[0].text.strip(), description=movie_description)
         movie_full_info_with_afisha.append(movie)
     return movie_full_info_with_afisha
 

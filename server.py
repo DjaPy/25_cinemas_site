@@ -3,7 +3,6 @@ import tempfile
 from werkzeug.contrib.cache import FileSystemCache
 from films_app.parser_for_search_pop_movie import output_movies
 import json
-import logging
 
 
 ONE_DAY = 60 * 60 * 24
