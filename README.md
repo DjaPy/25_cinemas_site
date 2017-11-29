@@ -9,7 +9,7 @@ The website displays the following information for popular films from the site [
 - Rating
 - Count cinemas
 
-View [website](https://telegraph-story.herokuapp.com/)
+View [website](https://popfilms.herokuapp.com/)
 
 Bonus: provides an API in JSON format
 
