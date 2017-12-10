@@ -26,26 +26,27 @@ def fetch_movie_kinopoisk(queue, url):
 
 
 def get_threads_kinopoisk(month):
-    content_list = []
+    list_content_from_kinopoisk = []
     for url in URLS_KINOPOISK:
         url = url.format(month)
         thread = threading.Thread(target=fetch_movie_kinopoisk,
                                   args=(queue, url))
         thread.start()
         result_thread = queue.get()
-        content_list.append(result_thread)
-    content = content_list[0] + content_list[1]
-    return content
+        list_content_from_kinopoisk.append(result_thread)
+    content_from_kinopoisk = list_content_from_kinopoisk[0] + list_content_from_kinopoisk[1]
+    return content_from_kinopoisk
 
 
-def get_films_in_kinopoisk(kinopoisk_content,
+def get_films_in_kinopoisk(content_from_kinopoisk,
                            initial_date,
                            current_date,
                            good_rate):
-    content = bs(kinopoisk_content, 'html.parser')
-    content_movies = content.find_all('div', {'class': 'premier_item'})
+    soup_kinopoisk = bs(content_from_kinopoisk, 'html.parser')
+    soup_movies_kinopoisk = soup_kinopoisk.find_all('div',
+                                                    {'class': 'premier_item'})
     info_movies_kinopoisk = []
-    for movie in content_movies:
+    for movie in soup_movies_kinopoisk:
         title = movie.find('span', {'class': 'name'}).text
         start_date = movie.find('meta').get('content')
         id_movie = movie['id']
@@ -70,11 +71,11 @@ def fetch_afisha_film():
 
 
 def parse_afisha_schedule_cinema(afisha_html, good_count_cinemas):
-    content = bs(afisha_html, 'html.parser')
-    content_movies = content('div',
-                             {'class': 'object s-votes-hover-area collapsed'})
+    soup_afisha = bs(afisha_html, 'html.parser')
+    soup_movies_afisha = soup_afisha('div',
+                                 {'class': 'object s-votes-hover-area collapsed'})
     info_movies_afisha = []
-    for movie in content_movies:
+    for movie in soup_movies_afisha:
         count_cinemas = len(movie('td',{'class': 'b-td-item'},'a'))
         if int(count_cinemas) >= good_count_cinemas:
             info_movies_afisha.append({'count_cinemas': count_cinemas,
@@ -105,23 +106,21 @@ def get_threads_afisha(data_info_movies):
 
     for movie in data_info_movies:
         url = movie['link']
-        print(url)
         thread = threading.Thread(target=fetch_afisha_film_page,
                                   args=(queue, url))
         thread.start()
-        content = queue.get()
-        content = bs(content, 'html.parser')
+        content_from_afisha = queue.get()
+        soup_afisha = bs(content_from_afisha, 'html.parser')
         description_id = {
             'id': 'ctl00_CenterPlaceHolder_ucMainPageContent_pEditorComments'}
-        genres = content.find_all('div', {'class': 'b-tags'})
+        genres = soup_afisha.find_all('div', {'class': 'b-tags'})
         genres = genres[0].find_all('a')
         list_genres = []
         for genre in genres:
             list_genres.append(genre.text)
         genres = ', '.join(list_genres)
-        print(genres)
         try:
-            movie_description = content.find('p', description_id).text.strip()
+            movie_description = soup_afisha.find('p', description_id).text.strip()
         except AttributeError:
             movie_discription = None
         movie.update(genres=genres.strip(), description=movie_description)
@@ -150,11 +149,11 @@ def output_movies():
     current_month = datetime.today().month
     last_month = initial_date.month
     if last_month != current_month:
-        kinopoisk_content = get_threads_kinopoisk(last_month) + \
+        content_from_kinopoisk = get_threads_kinopoisk(last_month) + \
                              get_threads_kinopoisk(current_month)
     else:
-        kinopoisk_content = get_threads_kinopoisk(current_month)
-    kinopoisk_info_list = get_films_in_kinopoisk(kinopoisk_content,
+        content_from_kinopoisk = get_threads_kinopoisk(current_month)
+    kinopoisk_info_list = get_films_in_kinopoisk(content_from_kinopoisk,
                                                 initial_date,
                                                 current_date,
                                                 good_rate)
@@ -175,16 +174,16 @@ if __name__ == '__main__':
     last_month = initial_date.month
     tic = time.time()
     if last_month != current_month:
-        kinopoisk_content = get_threads_kinopoisk(last_month) +\
-                            get_threads_kinopoisk(current_month)
+        content_from_kinopoisk = get_threads_kinopoisk(last_month) + \
+                                 get_threads_kinopoisk(current_month)
     else:
-        kinopoisk_content = get_threads_kinopoisk(current_month)
-    kinopoisk_info_list = get_films_in_kinopoisk(kinopoisk_content,
+        content_from_kinopoisk = get_threads_kinopoisk(current_month)
+    kinopoisk_info_list = get_films_in_kinopoisk(content_from_kinopoisk,
                                                  initial_date,
                                                  current_date,
                                                  good_rate)
     tac = time.time()
-    print(tac - tic)
+    print(tac - tic, 'секунд затрачено на парсинг Кинопоиска')
     tic = time.time()
     afisha_html = fetch_afisha_film()
     info_movies_afisha = parse_afisha_schedule_cinema(afisha_html,
@@ -192,6 +191,6 @@ if __name__ == '__main__':
     data_movies_afisha = parse_info_movies_afisha(info_movies_afisha)
     afisha_info_list = get_threads_afisha(data_movies_afisha)
     tac = time.time()
-    print(tac - tic)
+    print(tac - tic, 'секунд затрачено на парсинг Афиши')
     for movie in get_pop_movies(afisha_info_list, kinopoisk_info_list)[:10]:
         print(movie)
