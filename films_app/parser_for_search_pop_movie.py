@@ -105,6 +105,7 @@ def get_threads_afisha(data_info_movies):
 
     for movie in data_info_movies:
         url = movie['link']
+        print(url)
         thread = threading.Thread(target=fetch_afisha_film_page,
                                   args=(queue, url))
         thread.start()
@@ -112,12 +113,18 @@ def get_threads_afisha(data_info_movies):
         content = bs(content, 'html.parser')
         description_id = {
             'id': 'ctl00_CenterPlaceHolder_ucMainPageContent_pEditorComments'}
-        genres = content.find_all('div', {'class': 'b-tags'}, 'a')
+        genres = content.find_all('div', {'class': 'b-tags'})
+        genres = genres[0].find_all('a')
+        list_genres = []
+        for genre in genres:
+            list_genres.append(genre.text)
+        genres = ', '.join(list_genres)
+        print(genres)
         try:
             movie_description = content.find('p', description_id).text.strip()
         except AttributeError:
             movie_discription = None
-        movie.update(genres=genres[0].text.strip(), description=movie_description)
+        movie.update(genres=genres.strip(), description=movie_description)
         movie_full_info_with_afisha.append(movie)
     return movie_full_info_with_afisha
 
